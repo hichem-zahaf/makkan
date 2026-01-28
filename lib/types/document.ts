@@ -23,7 +23,12 @@ export interface DocumentListItem {
   readStatus?: ReadStatus;
   rating?: number;
   dateAdded?: Date;
+  dateModified?: Date;
   isFavorite?: boolean;
+  project?: string;
+  language?: string;
+  fileType?: string;
+  libraryId?: string;
 }
 
 export type ReadStatus = 'unread' | 'reading' | 'read';
@@ -38,6 +43,10 @@ export interface DocumentFilter {
   dateFrom?: Date;
   dateTo?: Date;
   isFavorite?: boolean;
+  project?: string;
+  language?: string;
+  fileType?: string;
+  libraryId?: string;
 }
 
 export interface DocumentSort {
@@ -53,7 +62,10 @@ export type SortField =
   | 'fileName'
   | 'fileSize'
   | 'rating'
-  | 'isFavorite';
+  | 'isFavorite'
+  | 'project'
+  | 'language'
+  | 'fileType';
 
 export interface BatchOperation {
   action: 'delete' | 'export' | 'tag' | 'move' | 'duplicate';

@@ -1,5 +1,56 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { updateLibrary, removeLibrary } from '@/services/settings-service';
+import { updateLibrary, removeLibrary, getLibraries } from '@/services/settings-service';
+import { promises as fs } from 'fs';
+import path from 'path';
+
+/**
+ * GET /api/settings/libraries/[id]
+ * Get a specific library with size information
+ */
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const libraries = await getLibraries();
+    const library = libraries.find((lib: any) => lib.id === id);
+
+    if (!library) {
+      return NextResponse.json(
+        { error: 'Library not found' },
+        { status: 404 }
+      );
+    }
+
+    // Calculate library size
+    let size = 0;
+    try {
+      const stat = await fs.stat(library.path);
+      if (stat.isDirectory()) {
+        // For directories, we'd need to recursively calculate size
+        // For now, return 0 as this can be expensive
+        size = 0;
+      } else {
+        size = stat.size;
+      }
+    } catch (error) {
+      // Path doesn't exist or is inaccessible
+      size = 0;
+    }
+
+    return NextResponse.json({
+      ...library,
+      size,
+    });
+  } catch (error) {
+    console.error('Error getting library:', error);
+    return NextResponse.json(
+      { error: 'Failed to get library' },
+      { status: 500 }
+    );
+  }
+}
 
 /**
  * PATCH /api/settings/libraries/[id]

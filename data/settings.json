@@ -1,15 +1,15 @@
 {
   "libraries": [
     {
-      "id": "34f4b02f",
+      "id": "315bac6e",
       "name": "Downloads",
-      "path": "C:\\Users\\Informatics\\Downloads",
+      "path": "C:\\Users\\Informatics\\Documents",
       "organization": "flat"
     }
   ],
   "defaultView": "grid",
   "itemsPerPage": 50,
-  "autoScan": false,
+  "autoScan": true,
   "scanInterval": 60,
   "theme": "dark"
 }

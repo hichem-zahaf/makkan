@@ -12,7 +12,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: 'MAKKAN - Local PDF DMS',
+  title: 'Makkan - Local PDF DMS',
   description: 'A local-first document management system for PDF collections with markdown-based metadata',
   icons: {
     icon: '/images/fevicon/favicon.ico',

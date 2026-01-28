@@ -11,6 +11,9 @@ export interface DocumentMetadata {
   rating?: number; // 1-5
   source?: string;
   notes?: string;
+  project?: string;
+  language?: string;
+  fileType?: string;
   customFields?: Record<string, string | number | boolean>;
 }
 
@@ -25,6 +28,9 @@ export interface MetadataFrontmatter {
   rating?: number;
   source?: string;
   notes?: string;
+  project?: string;
+  language?: string;
+  file_type?: string;
   [key: string]: string | string[] | number | undefined;
 }
 

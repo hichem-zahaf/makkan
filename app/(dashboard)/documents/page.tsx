@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { SearchBar } from '@/components/search/search-bar';
 import { SearchFilters } from '@/components/search/search-filters';
 import { ViewToggle } from '@/components/documents/view-toggle';
@@ -27,9 +27,11 @@ import {
 import { cn } from '@/lib/utils/cn';
 import { toast } from 'sonner';
 import type { Document, ViewMode, DocumentSort } from '@/lib/types';
+import { getFileType } from '@/components/documents/file-icon';
 
 export default function DocumentsPage() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<ViewMode>('grid');
@@ -43,6 +45,19 @@ export default function DocumentsPage() {
   const [categories, setCategories] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
+
+  // Helper to update URL params
+  const updateUrlParams = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value === null) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
+      }
+    });
+    router.push(`?${params.toString()}`);
+  };
 
   // Batch selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -221,13 +236,8 @@ export default function DocumentsPage() {
             variant={searchParams.get('isFavorite') === 'true' ? 'default' : 'outline'}
             size="sm"
             onClick={() => {
-              const params = new URLSearchParams(searchParams.toString());
-              if (params.get('isFavorite') === 'true') {
-                params.delete('isFavorite');
-              } else {
-                params.set('isFavorite', 'true');
-              }
-              window.location.href = `?${params.toString()}`;
+              const currentValue = searchParams.get('isFavorite');
+              updateUrlParams({ isFavorite: currentValue === 'true' ? null : 'true' });
             }}
           >
             <Star className="w-4 h-4 mr-2" />
@@ -292,11 +302,11 @@ export default function DocumentsPage() {
             readStatus: (searchParams.get('readStatus') as 'unread' | 'reading' | 'read') || undefined,
           }}
           onFiltersChange={(filters) => {
-            const params = new URLSearchParams();
-            if (filters.category) params.set('category', filters.category);
-            if (filters.tags) params.set('tags', filters.tags.join(','));
-            if (filters.readStatus) params.set('readStatus', filters.readStatus);
-            window.location.href = `?${params.toString()}`;
+            updateUrlParams({
+              category: filters.category || null,
+              tags: filters.tags ? filters.tags.join(',') : null,
+              readStatus: filters.readStatus || null,
+            });
           }}
           categories={categories}
           tags={tags}
@@ -366,7 +376,10 @@ export default function DocumentsPage() {
                       readStatus: doc.metadata.readStatus,
                       rating: doc.metadata.rating,
                       dateAdded: doc.metadata.dateAdded,
-                      isFavorite: doc.metadata.customFields?.isFavorite === true,
+                      isFavorite: doc.isFavorite || false,
+                      project: doc.metadata.project,
+                      language: doc.metadata.language,
+                      fileType: doc.metadata.fileType || getFileType(doc.fileName),
                     }}
                   />
                 </div>
@@ -404,6 +417,9 @@ export default function DocumentsPage() {
                         readStatus: doc.metadata.readStatus,
                         rating: doc.metadata.rating,
                         dateAdded: doc.metadata.dateAdded,
+                        project: doc.metadata.project,
+                        language: doc.metadata.language,
+                        fileType: doc.metadata.fileType || getFileType(doc.fileName),
                       }}
                     />
                   ))}
