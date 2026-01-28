@@ -4,48 +4,55 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* MAKKAN Theme Colors - Light Mode */
+    /* #452829 - Dark brown -> hsl(10, 31%, 17%) */
+    /* #57595B - Gray -> hsl(210, 3%, 35%) */
+    /* #E8D1C5 - Light beige -> hsl(28, 31%, 85%) */
+    /* #F3E8DF - Cream -> hsl(26, 40%, 94%) */
+
+    --background: 26 40% 94%; /* #F3E8DF - Cream background */
+    --foreground: 10 31% 17%; /* #452829 - Dark brown text */
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 10 31% 17%;
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
+    --popover-foreground: 10 31% 17%;
+    --primary: 10 31% 17%; /* #452829 - Dark brown primary */
+    --primary-foreground: 26 40% 94%; /* Cream text on dark brown */
+    --secondary: 28 31% 85%; /* #E8D1C5 - Light beige */
+    --secondary-foreground: 10 31% 17%;
+    --muted: 28 31% 85%;
+    --muted-foreground: 210 3% 35%; /* #57595B - Gray */
+    --accent: 28 31% 85%; /* Light beige accent */
+    --accent-foreground: 10 31% 17%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 28 31% 75%;
+    --input: 28 31% 75%;
+    --ring: 10 31% 17%;
     --radius: 0.5rem;
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
+    /* MAKKAN Theme Colors - Dark Mode */
+    --background: 210 3% 15%; /* #57595B - Gray background */
+    --foreground: 26 40% 90%; /* Light beige text */
+    --card: 210 3% 18%; /* Slightly lighter gray for cards */
+    --card-foreground: 26 40% 90%;
+    --popover: 210 3% 18%;
+    --popover-foreground: 26 40% 90%;
+    --primary: 28 31% 85%; /* #E8D1C5 - Light beige primary in dark mode */
+    --primary-foreground: 10 31% 17%;
+    --secondary: 210 3% 22%;
+    --secondary-foreground: 28 31% 85%;
+    --muted: 210 3% 22%;
+    --muted-foreground: 28 31% 65%;
+    --accent: 10 31% 25%; /* Touch of dark brown for accent */
+    --accent-foreground: 28 31% 85%;
+    --destructive: 0 62% 45%;
+    --destructive-foreground: 26 40% 90%;
+    --border: 210 3% 25%;
+    --input: 210 3% 25%;
+    --ring: 28 31% 85%;
   }
 }
 
@@ -56,4 +63,89 @@
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Smooth transitions for theme changes */
+* {
+  transition-property: color, background-color, border-color;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Disable transitions on specific elements for performance */
+input, textarea, select {
+  transition-property: none;
+}
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Loading skeleton animation */
+@keyframes skeleton-shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.5) 25%,
+    hsl(var(--muted) / 0.8) 50%,
+    hsl(var(--muted) / 0.5) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 2s infinite;
+}
+
+/* Smooth fade in animation */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-in {
+  animation: fade-in 0.3s ease-out forwards;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1);
+}
+
+/* Focus visible improvements */
+:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
 }

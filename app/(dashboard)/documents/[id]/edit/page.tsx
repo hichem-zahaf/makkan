@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Save, X, Star } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -294,13 +295,15 @@ export default function EditDocumentPage() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to save metadata');
+        const errorData = await res.json().catch(() => ({ error: 'Unknown error' }));
+        throw new Error(errorData.error || 'Failed to save metadata');
       }
 
+      toast.success('Metadata saved successfully');
       router.push(`/documents/${params.id}`);
     } catch (err) {
       console.error('Failed to save metadata:', err);
-      alert('Failed to save metadata. Please try again.');
+      toast.error(err instanceof Error ? err.message : 'Failed to save metadata. Please try again.');
     } finally {
       setSaving(false);
     }

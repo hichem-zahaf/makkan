@@ -1,12 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
-  getAllDocuments,
-  getFilteredDocuments,
-  refreshDocumentCache,
-  getDocumentStats,
+  getDocuments,
+  getDocumentCount,
+  searchDocuments as sqliteSearch,
+  isDatabasePopulated,
+  getStats,
   getCategories,
   getTags,
   getAuthors,
+} from '@/services/query-service';
+import {
+  getAllDocuments,
+  getFilteredDocuments,
+  refreshDocumentCache,
 } from '@/services/document-service';
 
 /**
@@ -16,17 +22,18 @@ import {
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
+    const useSearch = searchParams.get('search');
 
     // Parse filters
     const filter = {
-      search: searchParams.get('search') || undefined,
       category: searchParams.get('category') || undefined,
-      tags: searchParams.get('tags')?.split(',') || undefined,
+      tags: searchParams.get('tags')?.split(',').filter(Boolean) || undefined,
       author: searchParams.get('author') || undefined,
       readStatus: (searchParams.get('readStatus') as 'unread' | 'reading' | 'read') || undefined,
       rating: searchParams.get('rating') ? parseInt(searchParams.get('rating')!) : undefined,
       dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')!) : undefined,
       dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined,
+      isFavorite: searchParams.get('isFavorite') === 'true' ? true : undefined,
     };
 
     // Parse sorting
@@ -43,14 +50,36 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '50');
     const offset = (page - 1) * limit;
 
-    // Get filtered and sorted documents
-    let documents = await getFilteredDocuments(filter, sort);
+    let documents: any[] = [];
+    let total = 0;
 
-    // Get total count before pagination
-    const total = documents.length;
+    // Use SQLite if database is populated, otherwise fallback to filesystem
+    const dbPopulated = isDatabasePopulated();
 
-    // Apply pagination
-    documents = documents.slice(offset, offset + limit);
+    if (useSearch) {
+      // Use SQLite FTS5 search
+      if (dbPopulated) {
+        documents = sqliteSearch(useSearch, limit, offset);
+        total = documents.length; // FTS doesn't return total count directly
+      } else {
+        // Fallback to filesystem search
+        const searchFilter = { ...filter, search: useSearch };
+        documents = await getFilteredDocuments(searchFilter, sort);
+        total = documents.length;
+        documents = documents.slice(offset, offset + limit);
+      }
+    } else {
+      // Standard filtered query
+      if (dbPopulated) {
+        documents = getDocuments(filter, sort, limit, offset);
+        total = getDocumentCount(filter);
+      } else {
+        // Fallback to filesystem
+        documents = await getFilteredDocuments(filter, sort);
+        total = documents.length;
+        documents = documents.slice(offset, offset + limit);
+      }
+    }
 
     return NextResponse.json({
       documents,
@@ -60,11 +89,12 @@ export async function GET(request: NextRequest) {
         total,
         totalPages: Math.ceil(total / limit),
       },
+      dbPopulated,
     });
   } catch (error) {
     console.error('Error fetching documents:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch documents' },
+      { error: 'Failed to fetch documents', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -72,7 +102,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/documents
- * Trigger a document scan/refresh
+ * Trigger a document scan/refresh or get stats
  */
 export async function POST(request: NextRequest) {
   try {
@@ -85,8 +115,37 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'stats') {
-      const stats = await getDocumentStats();
-      return NextResponse.json(stats);
+      // Use SQLite stats if available
+      if (isDatabasePopulated()) {
+        const stats = getStats();
+        return NextResponse.json({
+          total: stats.total,
+          byReadStatus: stats.byReadStatus,
+          byCategory: stats.byCategory,
+          totalSize: stats.totalSize,
+          favoriteCount: stats.favoriteCount,
+        });
+      } else {
+        // Fallback to filesystem stats
+        const { getDocumentStats } = require('@/services/document-service');
+        const stats = await getDocumentStats();
+        return NextResponse.json(stats);
+      }
+    }
+
+    if (action === 'categories') {
+      const categories = isDatabasePopulated() ? getCategories() : await (await import('@/services/document-service')).getCategories();
+      return NextResponse.json({ categories });
+    }
+
+    if (action === 'tags') {
+      const tags = isDatabasePopulated() ? getTags() : await (await import('@/services/document-service')).getTags();
+      return NextResponse.json({ tags });
+    }
+
+    if (action === 'authors') {
+      const authors = isDatabasePopulated() ? getAuthors() : await (await import('@/services/document-service')).getAuthors();
+      return NextResponse.json({ authors });
     }
 
     return NextResponse.json(
@@ -96,7 +155,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error processing request:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: 'Failed to process request', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }

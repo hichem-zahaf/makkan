@@ -8,10 +8,11 @@ import { streamPdfFile } from '@/lib/fs/pdf-stream';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const document = await getDocumentById(params.id);
+    const { id } = await params;
+    const document = await getDocumentById(id);
 
     if (!document) {
       return NextResponse.json(

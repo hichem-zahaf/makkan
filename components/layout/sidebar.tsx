@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import {
   Home,
@@ -9,7 +10,6 @@ import {
   Settings,
   FolderOpen,
   Upload,
-  Library,
 } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 
@@ -41,8 +41,15 @@ export function Sidebar({ libraries = [], className }: SidebarPropsExtended) {
     <div className={cn('flex flex-col h-full bg-muted/30 border-r', className)}>
       {/* Logo/Brand */}
       <div className="p-6 border-b">
-        <Link href="/" className="flex items-center gap-2">
-          <Library className="w-6 h-6 text-primary" />
+        <Link href="/" className="flex items-center gap-3">
+          <div className="relative w-8 h-8">
+            <Image
+              src="/images/logo.png"
+              alt="MAKKAN Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
           <span className="text-xl font-bold">MAKKAN</span>
         </Link>
       </div>

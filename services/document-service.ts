@@ -213,7 +213,7 @@ export async function updateDocumentMetadata(
     dateModified: new Date(),
   };
 
-  // Write to markdown file
+  // Write to markdown file (source of truth)
   const mdPath = getCompanionMarkdownPath(doc.filePath);
   await writeMarkdownFile(mdPath, updatedMetadata, doc.metadata.notes || '');
 
@@ -226,6 +226,15 @@ export async function updateDocumentMetadata(
 
   // Update cache
   await refreshDocumentCache();
+
+  // Sync to SQLite (fire and forget)
+  try {
+    const { syncDocument } = require('./sync-service');
+    syncDocument(updatedDoc);
+  } catch (error) {
+    // Log but don't fail - filesystem is source of truth
+    console.warn('Failed to sync to SQLite:', error);
+  }
 
   return updatedDoc;
 }
@@ -365,6 +374,15 @@ export async function deleteDocument(id: string): Promise<boolean> {
 
     // Refresh cache
     await refreshDocumentCache();
+
+    // Sync to SQLite (fire and forget)
+    try {
+      const { removeDocumentFromDb } = require('./sync-service');
+      removeDocumentFromDb(id);
+    } catch (error) {
+      // Log but don't fail - filesystem is source of truth
+      console.warn('Failed to remove from SQLite:', error);
+    }
 
     return true;
   } catch {

@@ -38,11 +38,24 @@ export function serializeMarkdown(
   if (metadata.category) frontmatter.category = metadata.category;
   if (metadata.tags && metadata.tags.length > 0)
     frontmatter.tags = metadata.tags;
-  if (metadata.dateAdded)
-    frontmatter.date_added = metadata.dateAdded.toISOString().split('T')[0];
-  if (metadata.dateModified)
-    frontmatter.date_modified =
-      metadata.dateModified.toISOString().split('T')[0];
+  if (metadata.dateAdded) {
+    // Handle both Date objects and ISO strings
+    const dateStr = metadata.dateAdded instanceof Date
+      ? metadata.dateAdded.toISOString().split('T')[0]
+      : typeof metadata.dateAdded === 'string'
+        ? new Date(metadata.dateAdded).toISOString().split('T')[0]
+        : metadata.dateAdded;
+    frontmatter.date_added = dateStr;
+  }
+  if (metadata.dateModified) {
+    // Handle both Date objects and ISO strings
+    const dateStr = metadata.dateModified instanceof Date
+      ? metadata.dateModified.toISOString().split('T')[0]
+      : typeof metadata.dateModified === 'string'
+        ? new Date(metadata.dateModified).toISOString().split('T')[0]
+        : metadata.dateModified;
+    frontmatter.date_modified = dateStr;
+  }
   if (metadata.readStatus) frontmatter.read_status = metadata.readStatus;
   if (metadata.rating) frontmatter.rating = metadata.rating;
   if (metadata.source) frontmatter.source = metadata.source;

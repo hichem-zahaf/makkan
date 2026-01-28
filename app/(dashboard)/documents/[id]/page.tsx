@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, ExternalLink, Trash2, Star } from 'lucide-react';
+import { ArrowLeft, Edit, ExternalLink, Trash2, Star, Copy, Download, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { Document as DocumentType } from '@/lib/types';
 import { formatFileSize } from '@/lib/utils/path';
 import { format as formatDate } from 'date-fns';
+import { toast } from 'sonner';
 
 export function PDFViewer({ document }: { document: DocumentType }) {
   const [pageCount, setPageCount] = useState(0);
@@ -95,24 +96,91 @@ export function PDFViewer({ document }: { document: DocumentType }) {
 
 export function DocumentMetadata({ document }: { document: DocumentType }) {
   const router = useRouter();
+  const [isFavorite, setIsFavorite] = useState(document.metadata.customFields?.isFavorite === true);
+  const [showFileInfo, setShowFileInfo] = useState(false);
+
+  const handleToggleFavorite = async () => {
+    try {
+      const res = await fetch(`/api/documents/${document.id}/favorite`, { method: 'POST' });
+      const data = await res.json();
+      setIsFavorite(data.isFavorite);
+      toast.success(data.isFavorite ? 'Added to favorites' : 'Removed from favorites');
+    } catch (error) {
+      toast.error('Failed to toggle favorite');
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this document?')) return;
 
     try {
       await fetch(`/api/documents/${document.id}`, { method: 'DELETE' });
+      toast.success('Document deleted');
       router.push('/documents');
     } catch (error) {
-      console.error('Failed to delete document:', error);
+      toast.error('Failed to delete document');
+    }
+  };
+
+  const handleDuplicate = async () => {
+    const newTitle = prompt('Enter title for the duplicate:', `${document.metadata.title} (Copy)`);
+    if (!newTitle) return;
+
+    try {
+      const res = await fetch(`/api/documents/${document.id}/duplicate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newTitle }),
+      });
+      if (res.ok) {
+        toast.success('Document duplicated successfully. Refresh your library to see it.');
+      }
+    } catch (error) {
+      toast.error('Failed to duplicate document');
+    }
+  };
+
+  const handleExport = async (format: 'json' | 'markdown') => {
+    try {
+      const res = await fetch(`/api/documents/${document.id}/export?format=${format}`);
+      if (format === 'json') {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = `${document.metadata.title}.json`;
+        a.click();
+      } else {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = window.document.createElement('a');
+        a.href = url;
+        a.download = `${document.metadata.title}.md`;
+        a.click();
+      }
+      toast.success('Exported successfully');
+    } catch (error) {
+      toast.error('Failed to export');
     }
   };
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold">{document.metadata.title}</h1>
-        <p className="text-sm text-muted-foreground mt-1">{document.fileName}</p>
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <h1 className="text-2xl font-bold">{document.metadata.title}</h1>
+          <p className="text-sm text-muted-foreground mt-1">{document.fileName}</p>
+        </div>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={handleToggleFavorite}
+          className={isFavorite ? 'text-yellow-500' : ''}
+        >
+          <Star className={`w-5 h-5 ${isFavorite ? 'fill-current' : ''}`} />
+        </Button>
       </div>
 
       {/* Rating */}
@@ -191,11 +259,70 @@ export function DocumentMetadata({ document }: { document: DocumentType }) {
         </div>
       </div>
 
+      {/* File Info - Expandable */}
+      <div className="pt-4 border-t">
+        <button
+          onClick={() => setShowFileInfo(!showFileInfo)}
+          className="flex items-center gap-2 text-sm font-medium hover:text-primary transition-colors"
+        >
+          <Info className="w-4 h-4" />
+          {showFileInfo ? 'Hide' : 'Show'} File Information
+        </button>
+        {showFileInfo && (
+          <div className="mt-4 p-4 bg-muted/30 rounded-lg space-y-2 text-sm">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-muted-foreground">File Name:</span>
+              </div>
+              <div className="text-right">{document.fileName}</div>
+              <div>
+                <span className="text-muted-foreground">File Size:</span>
+              </div>
+              <div className="text-right">{formatFileSize(document.fileSize)}</div>
+              <div>
+                <span className="text-muted-foreground">File Path:</span>
+              </div>
+              <div className="text-right text-xs truncate" title={document.filePath}>
+                {document.filePath}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Date Added:</span>
+              </div>
+              <div className="text-right">
+                {document.createdAt
+                  ? formatDate(new Date(document.createdAt), 'MMM d, yyyy')
+                  : 'Unknown'}
+              </div>
+              <div>
+                <span className="text-muted-foreground">Date Modified:</span>
+              </div>
+              <div className="text-right">
+                {document.updatedAt
+                  ? formatDate(new Date(document.updatedAt), 'MMM d, yyyy')
+                  : 'Unknown'}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Actions */}
-      <div className="pt-4 border-t flex gap-2">
+      <div className="pt-4 border-t flex flex-wrap gap-2">
         <Button variant="outline" onClick={() => router.push(`/documents/${document.id}/edit`)}>
           <Edit className="w-4 h-4 mr-2" />
           Edit Metadata
+        </Button>
+        <Button variant="outline" onClick={handleDuplicate}>
+          <Copy className="w-4 h-4 mr-2" />
+          Duplicate
+        </Button>
+        <Button variant="outline" onClick={() => handleExport('json')}>
+          <Download className="w-4 h-4 mr-2" />
+          Export JSON
+        </Button>
+        <Button variant="outline" onClick={() => handleExport('markdown')}>
+          <Download className="w-4 h-4 mr-2" />
+          Export MD
         </Button>
         <Button variant="outline" onClick={handleDelete} className="text-destructive">
           <Trash2 className="w-4 h-4 mr-2" />

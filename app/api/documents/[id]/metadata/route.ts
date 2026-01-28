@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDocumentById, updateDocumentMetadata } from '@/services/document-service';
 import { readMarkdownFile, writeMarkdownFile, getCompanionMarkdownPath } from '@/lib/fs';
+import { promises as fs } from 'fs';
+import path from 'path';
 
 /**
  * GET /api/documents/[id]/metadata
@@ -8,10 +10,11 @@ import { readMarkdownFile, writeMarkdownFile, getCompanionMarkdownPath } from '@
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const document = await getDocumentById(params.id);
+    const { id } = await params;
+    const document = await getDocumentById(id);
 
     if (!document) {
       return NextResponse.json(
@@ -32,7 +35,7 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching document metadata:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch metadata' },
+      { error: 'Failed to fetch metadata', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
@@ -44,9 +47,10 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
     const { metadata, content } = body;
 
@@ -57,7 +61,7 @@ export async function PUT(
       );
     }
 
-    const document = await getDocumentById(params.id);
+    const document = await getDocumentById(id);
 
     if (!document) {
       return NextResponse.json(
@@ -68,16 +72,29 @@ export async function PUT(
 
     // Write the updated metadata and content
     const mdPath = getCompanionMarkdownPath(document.filePath);
+
+    // Ensure the directory exists before writing
+    const directory = path.dirname(mdPath);
+    try {
+      await fs.access(directory);
+    } catch {
+      // Directory doesn't exist, create it
+      await fs.mkdir(directory, { recursive: true });
+    }
+
     await writeMarkdownFile(mdPath, metadata, content || '');
 
     // Update document metadata
-    const updated = await updateDocumentMetadata(params.id, metadata);
+    const updated = await updateDocumentMetadata(id, metadata);
 
     return NextResponse.json(updated);
   } catch (error) {
     console.error('Error updating document metadata:', error);
     return NextResponse.json(
-      { error: 'Failed to update metadata' },
+      {
+        error: 'Failed to update metadata',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
       { status: 500 }
     );
   }

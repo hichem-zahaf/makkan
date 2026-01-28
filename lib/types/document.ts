@@ -8,6 +8,7 @@ export interface Document {
   metadata: DocumentMetadata;
   createdAt: Date;
   updatedAt: Date;
+  isFavorite?: boolean;
 }
 
 export interface DocumentListItem {
@@ -22,6 +23,7 @@ export interface DocumentListItem {
   readStatus?: ReadStatus;
   rating?: number;
   dateAdded?: Date;
+  isFavorite?: boolean;
 }
 
 export type ReadStatus = 'unread' | 'reading' | 'read';
@@ -35,6 +37,7 @@ export interface DocumentFilter {
   rating?: number;
   dateFrom?: Date;
   dateTo?: Date;
+  isFavorite?: boolean;
 }
 
 export interface DocumentSort {
@@ -49,4 +52,15 @@ export type SortField =
   | 'dateModified'
   | 'fileName'
   | 'fileSize'
-  | 'rating';
+  | 'rating'
+  | 'isFavorite';
+
+export interface BatchOperation {
+  action: 'delete' | 'export' | 'tag' | 'move' | 'duplicate';
+  documentIds: string[];
+  options?: {
+    tags?: string[];
+    targetLibrary?: string;
+    exportFormat?: 'json' | 'markdown';
+  };
+}

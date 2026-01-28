@@ -7,11 +7,12 @@ import { updateLibrary, removeLibrary } from '@/services/settings-service';
  */
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const updated = await updateLibrary(params.id, body);
+    const updated = await updateLibrary(id, body);
 
     if (!updated) {
       return NextResponse.json(
@@ -36,10 +37,11 @@ export async function PATCH(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const success = await removeLibrary(params.id);
+    const { id } = await params;
+    const success = await removeLibrary(id);
 
     if (!success) {
       return NextResponse.json(

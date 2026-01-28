@@ -2,6 +2,7 @@
 
 import { Bell, Search, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/theme-toggle';
 import { useState } from 'react';
 
 interface HeaderProps {
@@ -32,9 +33,7 @@ export function Header({ title, onMenuClick, showMenuButton = false }: HeaderPro
         <Button variant="ghost" size="icon" onClick={() => setSearchOpen(!searchOpen)}>
           <Search className="w-5 h-5" />
         </Button>
-        <Button variant="ghost" size="icon">
-          <Bell className="w-5 h-5" />
-        </Button>
+        <ThemeToggle />
       </div>
 
       {searchOpen && (

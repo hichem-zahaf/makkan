@@ -11,5 +11,5 @@
   "itemsPerPage": 50,
   "autoScan": false,
   "scanInterval": 60,
-  "theme": "system"
+  "theme": "dark"
 }

@@ -15,8 +15,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import {
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  Star,
+  Trash2,
+  Download,
+  Tag as TagIcon,
+} from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
+import { toast } from 'sonner';
 import type { Document, ViewMode, DocumentSort } from '@/lib/types';
 
 export default function DocumentsPage() {
@@ -35,6 +44,10 @@ export default function DocumentsPage() {
   const [tags, setTags] = useState<string[]>([]);
   const [authors, setAuthors] = useState<string[]>([]);
 
+  // Batch selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBatchActions, setShowBatchActions] = useState(false);
+
   // Load documents
   useEffect(() => {
     async function loadDocuments() {
@@ -51,11 +64,13 @@ export default function DocumentsPage() {
         const category = searchParams.get('category');
         const readStatus = searchParams.get('readStatus');
         const tags = searchParams.get('tags');
+        const isFavorite = searchParams.get('isFavorite');
 
         if (search) params.set('search', search);
         if (category) params.set('category', category);
         if (readStatus) params.set('readStatus', readStatus);
         if (tags) params.set('tags', tags);
+        if (isFavorite === 'true') params.set('isFavorite', 'true');
 
         const res = await fetch(`/api/documents?${params}`);
         const data = await res.json();
@@ -107,6 +122,89 @@ export default function DocumentsPage() {
 
   const totalPages = Math.ceil(total / limit);
 
+  // Toggle selection
+  const toggleSelection = (id: string) => {
+    const newSelection = new Set(selectedIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedIds(newSelection);
+    setShowBatchActions(newSelection.size > 0);
+  };
+
+  const clearSelection = () => {
+    setSelectedIds(new Set());
+    setShowBatchActions(false);
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(documents.map((d) => d.id)));
+    setShowBatchActions(true);
+  };
+
+  // Batch operations
+  const handleBatchDelete = async () => {
+    if (!confirm(`Delete ${selectedIds.size} documents?`)) return;
+
+    try {
+      const res = await fetch('/api/documents/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delete',
+          documentIds: Array.from(selectedIds),
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        toast.success(`Deleted ${data.successCount} documents`);
+        clearSelection();
+        // Reload documents
+        window.location.reload();
+      }
+    } catch (error) {
+      toast.error('Failed to delete documents');
+    }
+  };
+
+  const handleBatchExport = async (format: 'json' | 'markdown') => {
+    try {
+      const res = await fetch('/api/documents/batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'export',
+          documentIds: Array.from(selectedIds),
+          options: { exportFormat: format },
+        }),
+      });
+
+      if (format === 'json') {
+        const data = await res.json();
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `documents-export-${Date.now()}.json`;
+        a.click();
+        toast.success(`Exported ${data.count} documents`);
+      } else {
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `documents-export-${Date.now()}.md`;
+        a.click();
+        toast.success('Exported documents as markdown');
+      }
+    } catch (error) {
+      toast.error('Failed to export documents');
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -118,9 +216,69 @@ export default function DocumentsPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Favorites Filter */}
+          <Button
+            variant={searchParams.get('isFavorite') === 'true' ? 'default' : 'outline'}
+            size="sm"
+            onClick={() => {
+              const params = new URLSearchParams(searchParams.toString());
+              if (params.get('isFavorite') === 'true') {
+                params.delete('isFavorite');
+              } else {
+                params.set('isFavorite', 'true');
+              }
+              window.location.href = `?${params.toString()}`;
+            }}
+          >
+            <Star className="w-4 h-4 mr-2" />
+            Favorites
+          </Button>
           <ViewToggle view={view} onViewChange={setView} />
         </div>
       </div>
+
+      {/* Batch Actions Bar */}
+      {showBatchActions && (
+        <div className="flex items-center justify-between p-4 bg-primary/10 border rounded-lg">
+          <div className="flex items-center gap-4">
+            <span className="text-sm font-medium">
+              {selectedIds.size} document{selectedIds.size !== 1 ? 's' : ''} selected
+            </span>
+            <Button variant="ghost" size="sm" onClick={clearSelection}>
+              Clear selection
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={selectAll}>
+              Select all ({documents.length})
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBatchExport('json')}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export JSON
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleBatchExport('markdown')}
+            >
+              <Download className="w-4 h-4 mr-2" />
+              Export MD
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBatchDelete}
+            >
+              <Trash2 className="w-4 h-4 mr-2" />
+              Delete
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="flex items-center gap-4">
@@ -184,22 +342,34 @@ export default function DocumentsPage() {
           {view === 'grid' ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {documents.map((doc) => (
-                <DocumentCard
-                  key={doc.id}
-                  document={{
-                    id: doc.id,
-                    fileName: doc.fileName,
-                    filePath: doc.filePath,
-                    fileSize: doc.fileSize,
-                    title: doc.metadata.title,
-                    author: doc.metadata.author,
-                    category: doc.metadata.category,
-                    tags: doc.metadata.tags,
-                    readStatus: doc.metadata.readStatus,
-                    rating: doc.metadata.rating,
-                    dateAdded: doc.metadata.dateAdded,
-                  }}
-                />
+                <div key={doc.id} className="relative">
+                  {showBatchActions && (
+                    <div className="absolute top-2 left-2 z-10">
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.has(doc.id)}
+                        onChange={() => toggleSelection(doc.id)}
+                        className="w-4 h-4 rounded border-input"
+                      />
+                    </div>
+                  )}
+                  <DocumentCard
+                    document={{
+                      id: doc.id,
+                      fileName: doc.fileName,
+                      filePath: doc.filePath,
+                      fileSize: doc.fileSize,
+                      title: doc.metadata.title,
+                      author: doc.metadata.author,
+                      category: doc.metadata.category,
+                      tags: doc.metadata.tags,
+                      readStatus: doc.metadata.readStatus,
+                      rating: doc.metadata.rating,
+                      dateAdded: doc.metadata.dateAdded,
+                      isFavorite: doc.metadata.customFields?.isFavorite === true,
+                    }}
+                  />
+                </div>
               ))}
             </div>
           ) : (

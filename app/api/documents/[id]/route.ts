@@ -11,10 +11,11 @@ import {
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const document = await getDocumentById(params.id);
+    const { id } = await params;
+    const document = await getDocumentById(id);
 
     if (!document) {
       return NextResponse.json(
@@ -39,11 +40,12 @@ export async function GET(
  */
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const body = await request.json();
-    const updated = await updateDocumentMetadata(params.id, body);
+    const updated = await updateDocumentMetadata(id, body);
 
     if (!updated) {
       return NextResponse.json(
@@ -68,10 +70,11 @@ export async function PUT(
  */
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const success = await deleteDocument(params.id);
+    const { id } = await params;
+    const success = await deleteDocument(id);
 
     if (!success) {
       return NextResponse.json(
