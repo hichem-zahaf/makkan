@@ -52,3 +52,8 @@ QWEN.md
 CLAUDE.md
 .claude
 .agents
+
+# data
+makkon.db
+makkon.db-shm
+makkon.db-wal
