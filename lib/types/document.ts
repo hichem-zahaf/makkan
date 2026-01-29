@@ -34,14 +34,16 @@ export interface DocumentListItem {
 export type ReadStatus = 'unread' | 'reading' | 'read';
 
 export interface DocumentFilter {
+  query?: string;
   search?: string;
   category?: string;
   tags?: string[];
+  fileTypes?: string[];
   author?: string;
   readStatus?: ReadStatus;
   rating?: number;
-  dateFrom?: Date;
-  dateTo?: Date;
+  dateFrom?: string;
+  dateTo?: string;
   isFavorite?: boolean;
   project?: string;
   language?: string;

@@ -16,6 +16,8 @@ import {
   refreshDocumentCache,
 } from './document-service';
 import { loadSettings } from './settings-service';
+import { getFileTypeFromExtension } from '@/lib/utils/file-type-utils';
+import { extname } from 'path';
 
 export interface SyncResult {
   added: number;
@@ -122,12 +124,19 @@ export function syncDocument(doc: Document): void {
     ? getOrCreateCategory(db, doc.metadata.category)
     : null;
 
+  // Detect file type
+  const ext = extname(doc.fileName);
+  const fileType = getFileTypeFromExtension(ext);
+
   const upsertDoc = db.prepare(`
     INSERT INTO documents (
-      id, file_name, file_path, file_size, title, author_id, category_id,
+      id, file_name, file_path, file_size, file_type, title, author_id, category_id,
       read_status, rating, source, notes, date_added, date_modified, is_favorite
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(file_path) DO UPDATE SET
+      file_name = excluded.file_name,
+      file_size = excluded.file_size,
+      file_type = excluded.file_type,
       title = excluded.title,
       author_id = excluded.author_id,
       category_id = excluded.category_id,
@@ -154,6 +163,7 @@ export function syncDocument(doc: Document): void {
     doc.fileName,
     doc.filePath,
     doc.fileSize,
+    fileType,
     doc.metadata.title,
     authorId,
     categoryId,

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateLibrary, removeLibrary, getLibraries } from '@/services/settings-service';
+import { getDirectorySize } from '@/lib/fs/directory-utils';
+import { getDocumentCountByLibraryPath, deleteDocumentsByLibraryPath } from '@/lib/db/database';
 import { promises as fs } from 'fs';
 import path from 'path';
 
@@ -28,9 +30,7 @@ export async function GET(
     try {
       const stat = await fs.stat(library.path);
       if (stat.isDirectory()) {
-        // For directories, we'd need to recursively calculate size
-        // For now, return 0 as this can be expensive
-        size = 0;
+        size = await getDirectorySize(library.path);
       } else {
         size = stat.size;
       }
@@ -84,7 +84,7 @@ export async function PATCH(
 
 /**
  * DELETE /api/settings/libraries/[id]
- * Delete a specific library
+ * Delete a specific library and cascade delete associated documents
  */
 export async function DELETE(
   request: NextRequest,
@@ -92,16 +92,37 @@ export async function DELETE(
 ) {
   try {
     const { id } = await params;
-    const success = await removeLibrary(id);
+    const libraries = await getLibraries();
+    const library = libraries.find((lib: any) => lib.id === id);
 
-    if (!success) {
+    if (!library) {
       return NextResponse.json(
         { error: 'Library not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json({ success: true });
+    // Get document count before deleting
+    const docCount = getDocumentCountByLibraryPath(library.path);
+
+    // Cascade delete documents
+    const deletedDocs = deleteDocumentsByLibraryPath(library.path);
+
+    // Remove library
+    const success = await removeLibrary(id);
+
+    if (!success) {
+      return NextResponse.json(
+        { error: 'Failed to delete library' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      deletedDocuments: deletedDocs,
+      totalDocuments: docCount
+    });
   } catch (error) {
     console.error('Error deleting library:', error);
     return NextResponse.json(

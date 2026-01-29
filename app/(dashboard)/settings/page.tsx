@@ -1,44 +1,50 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, FolderOpen, Edit2, Check, X } from 'lucide-react';
+import { FolderOpen } from 'lucide-react';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import type { AppSettings, Library } from '@/lib/types';
+import type { AppSettings } from '@/lib/types';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<AppSettings | null>(null);
+  const [originalSettings, setOriginalSettings] = useState<AppSettings | null>(null);
+  const [hasChanges, setHasChanges] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showAddLibrary, setShowAddLibrary] = useState(false);
-  const [editingLibrary, setEditingLibrary] = useState<Library | null>(null);
-  const [libraryForm, setLibraryForm] = useState({
-    name: '',
-    path: '',
-    organization: 'flat' as Library['organization'],
-  });
 
   useEffect(() => {
     loadSettings();
   }, []);
+
+  useEffect(() => {
+    if (settings && originalSettings) {
+      setHasChanges(JSON.stringify(settings) !== JSON.stringify(originalSettings));
+    }
+  }, [settings, originalSettings]);
 
   async function loadSettings() {
     try {
       const res = await fetch('/api/settings');
       const data = await res.json();
       setSettings(data);
+      setOriginalSettings(JSON.parse(JSON.stringify(data)));
+      setHasChanges(false);
     } catch (error) {
       console.error('Failed to load settings:', error);
+      toast.error('Failed to load settings');
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function getDocumentCountForLibrary(libraryPath: string): Promise<number> {
+    try {
+      const res = await fetch(`/api/settings/libraries/count?path=${encodeURIComponent(libraryPath)}`);
+      const data = await res.json();
+      return data.count || 0;
+    } catch {
+      return 0;
     }
   }
 
@@ -55,82 +61,14 @@ export default function SettingsPage() {
       if (!res.ok) {
         throw new Error('Failed to save settings');
       }
+
+      toast.success('Settings saved successfully');
+      setOriginalSettings(JSON.parse(JSON.stringify(settings)));
+      setHasChanges(false);
     } catch (error) {
       console.error('Failed to save settings:', error);
-      alert('Failed to save settings');
+      toast.error('Failed to save settings');
     }
-  }
-
-  async function addLibrary() {
-    try {
-      const res = await fetch('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(libraryForm),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to add library');
-      }
-
-      await loadSettings();
-      setShowAddLibrary(false);
-      setLibraryForm({ name: '', path: '', organization: 'flat' });
-    } catch (error) {
-      console.error('Failed to add library:', error);
-      alert('Failed to add library');
-    }
-  }
-
-  async function updateLibrary() {
-    if (!editingLibrary) return;
-
-    try {
-      const res = await fetch(`/api/settings/libraries/${editingLibrary.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(libraryForm),
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to update library');
-      }
-
-      await loadSettings();
-      setEditingLibrary(null);
-      setLibraryForm({ name: '', path: '', organization: 'flat' });
-    } catch (error) {
-      console.error('Failed to update library:', error);
-      alert('Failed to update library');
-    }
-  }
-
-  async function deleteLibrary(id: string) {
-    if (!confirm('Are you sure you want to remove this library?')) return;
-
-    try {
-      const res = await fetch(`/api/settings/libraries/${id}`, {
-        method: 'DELETE',
-      });
-
-      if (!res.ok) {
-        throw new Error('Failed to delete library');
-      }
-
-      await loadSettings();
-    } catch (error) {
-      console.error('Failed to delete library:', error);
-      alert('Failed to delete library');
-    }
-  }
-
-  function openEditDialog(library: Library) {
-    setEditingLibrary(library);
-    setLibraryForm({
-      name: library.name,
-      path: library.path,
-      organization: library.organization,
-    });
   }
 
   if (loading) {
@@ -188,57 +126,20 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      {/* Libraries */}
+      {/* Libraries Management Link */}
       <section className="border rounded-lg p-6 bg-card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold">Libraries</h2>
-          <Button onClick={() => setShowAddLibrary(true)}>
-            <Plus className="w-4 h-4 mr-2" />
-            Add Library
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-lg font-semibold">Libraries</h2>
+            <p className="text-sm text-muted-foreground">
+              Manage document libraries and scan for new files
+            </p>
+          </div>
+          <Button onClick={() => window.location.href = '/import'}>
+            <FolderOpen className="w-4 h-4 mr-2" />
+            Manage Libraries
           </Button>
         </div>
-
-        {settings.libraries.length === 0 ? (
-          <div className="text-center py-8 text-muted-foreground">
-            <FolderOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
-            <p>No libraries configured</p>
-            <p className="text-sm">Add a library to start managing your documents</p>
-          </div>
-        ) : (
-          <div className="space-y-3">
-            {settings.libraries.map((library) => (
-              <div
-                key={library.id}
-                className="flex items-center justify-between p-4 border rounded-lg"
-              >
-                <div className="flex-1">
-                  <h3 className="font-medium">{library.name}</h3>
-                  <p className="text-sm text-muted-foreground">{library.path}</p>
-                  <div className="flex gap-2 mt-2">
-                    <Badge variant="outline">{library.organization}</Badge>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => openEditDialog(library)}
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => deleteLibrary(library.id)}
-                    className="text-destructive"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
       {/* Scan Settings */}
@@ -302,120 +203,10 @@ export default function SettingsPage() {
 
       {/* Save Button */}
       <div className="flex justify-end">
-        <Button onClick={saveSettings} size="lg">
+        <Button onClick={saveSettings} size="lg" disabled={!hasChanges}>
           Save Settings
         </Button>
       </div>
-
-      {/* Add Library Dialog */}
-      <Dialog open={showAddLibrary} onOpenChange={setShowAddLibrary}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add Library</DialogTitle>
-            <DialogDescription>
-              Add a new folder to scan for PDF documents
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Name</label>
-              <Input
-                value={libraryForm.name}
-                onChange={(e) =>
-                  setLibraryForm({ ...libraryForm, name: e.target.value })
-                }
-                placeholder="My Documents"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Path</label>
-              <Input
-                value={libraryForm.path}
-                onChange={(e) =>
-                  setLibraryForm({ ...libraryForm, path: e.target.value })
-                }
-                placeholder="/path/to/documents"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Organization</label>
-              <select
-                value={libraryForm.organization}
-                onChange={(e) =>
-                  setLibraryForm({
-                    ...libraryForm,
-                    organization: e.target.value as Library['organization'],
-                  })
-                }
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-              >
-                <option value="flat">Flat (all files in one folder)</option>
-                <option value="category">By Category</option>
-                <option value="year">By Year</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setShowAddLibrary(false)}>
-              Cancel
-            </Button>
-            <Button onClick={addLibrary}>Add Library</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Edit Library Dialog */}
-      <Dialog open={!!editingLibrary} onOpenChange={(open) => !open && setEditingLibrary(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Edit Library</DialogTitle>
-            <DialogDescription>Update library configuration</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Name</label>
-              <Input
-                value={libraryForm.name}
-                onChange={(e) =>
-                  setLibraryForm({ ...libraryForm, name: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Path</label>
-              <Input
-                value={libraryForm.path}
-                onChange={(e) =>
-                  setLibraryForm({ ...libraryForm, path: e.target.value })
-                }
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Organization</label>
-              <select
-                value={libraryForm.organization}
-                onChange={(e) =>
-                  setLibraryForm({
-                    ...libraryForm,
-                    organization: e.target.value as Library['organization'],
-                  })
-                }
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
-              >
-                <option value="flat">Flat (all files in one folder)</option>
-                <option value="category">By Category</option>
-                <option value="year">By Year</option>
-              </select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditingLibrary(null)}>
-              Cancel
-            </Button>
-            <Button onClick={updateLibrary}>Save Changes</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

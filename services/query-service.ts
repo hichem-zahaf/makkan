@@ -107,11 +107,22 @@ export function getDocuments(
     }
     if (filter.dateFrom) {
       conditions.push('d.date_added >= ?');
-      params.push(filter.dateFrom.toISOString());
+      const dateFromStr = typeof filter.dateFrom === 'string'
+        ? filter.dateFrom
+        : (filter.dateFrom as Date).toISOString();
+      params.push(dateFromStr);
     }
     if (filter.dateTo) {
       conditions.push('d.date_added <= ?');
-      params.push(filter.dateTo.toISOString());
+      const dateToStr = typeof filter.dateTo === 'string'
+        ? filter.dateTo
+        : (filter.dateTo as Date).toISOString();
+      params.push(dateToStr);
+    }
+    if (filter.fileTypes && filter.fileTypes.length > 0) {
+      const typeParams = filter.fileTypes.map(() => '?').join(',');
+      conditions.push(`d.file_type IN (${typeParams})`);
+      params.push(...filter.fileTypes);
     }
     if (filter.tags && filter.tags.length > 0) {
       const tagParams = filter.tags.map(() => '?').join(',');
@@ -194,11 +205,22 @@ export function getDocumentCount(filter?: DocumentFilter): number {
     }
     if (filter.dateFrom) {
       conditions.push('d.date_added >= ?');
-      params.push(filter.dateFrom.toISOString());
+      const dateFromStr = typeof filter.dateFrom === 'string'
+        ? filter.dateFrom
+        : (filter.dateFrom as Date).toISOString();
+      params.push(dateFromStr);
     }
     if (filter.dateTo) {
       conditions.push('d.date_added <= ?');
-      params.push(filter.dateTo.toISOString());
+      const dateToStr = typeof filter.dateTo === 'string'
+        ? filter.dateTo
+        : (filter.dateTo as Date).toISOString();
+      params.push(dateToStr);
+    }
+    if (filter.fileTypes && filter.fileTypes.length > 0) {
+      const typeParams = filter.fileTypes.map(() => '?').join(',');
+      conditions.push(`d.file_type IN (${typeParams})`);
+      params.push(...filter.fileTypes);
     }
     if (filter.tags && filter.tags.length > 0) {
       const tagParams = filter.tags.map(() => '?').join(',');

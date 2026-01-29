@@ -26,13 +26,15 @@ export async function GET(request: NextRequest) {
 
     // Parse filters
     const filter = {
+      query: searchParams.get('query') || searchParams.get('search') || undefined,
       category: searchParams.get('category') || undefined,
       tags: searchParams.get('tags')?.split(',').filter(Boolean) || undefined,
+      fileTypes: searchParams.get('fileTypes')?.split(',').filter(Boolean) || undefined,
       author: searchParams.get('author') || undefined,
       readStatus: (searchParams.get('readStatus') as 'unread' | 'reading' | 'read') || undefined,
       rating: searchParams.get('rating') ? parseInt(searchParams.get('rating')!) : undefined,
-      dateFrom: searchParams.get('dateFrom') ? new Date(searchParams.get('dateFrom')!) : undefined,
-      dateTo: searchParams.get('dateTo') ? new Date(searchParams.get('dateTo')!) : undefined,
+      dateFrom: searchParams.get('dateFrom') || undefined,
+      dateTo: searchParams.get('dateTo') || undefined,
       isFavorite: searchParams.get('isFavorite') === 'true' ? true : undefined,
     };
 

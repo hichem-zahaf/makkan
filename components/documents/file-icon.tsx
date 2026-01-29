@@ -6,6 +6,7 @@ export type FileType = 'pdf' | 'image' | 'video' | 'audio' | 'document' | 'text'
 interface FileIconProps {
   fileType: FileType;
   className?: string;
+  extension?: string;
 }
 
 const fileIcons = {
@@ -56,16 +57,23 @@ export function getFileType(filename: string): FileType {
 }
 
 export function isPreviewable(fileType: FileType): boolean {
-  return ['pdf', 'image', 'video', 'audio', 'text'].includes(fileType);
+  return ['pdf', 'image', 'video', 'audio', 'text', 'document'].includes(fileType);
 }
 
-export function FileIcon({ fileType, className }: FileIconProps) {
+export function FileIcon({ fileType, className, extension }: FileIconProps) {
   const Icon = fileIcons[fileType];
   const colorClass = fileColors[fileType];
 
   return (
     <div className={cn('flex items-center justify-center', className)}>
-      <Icon className={cn('w-6 h-6', colorClass)} />
+      <div className="flex flex-col items-center gap-1">
+        <Icon className={cn('w-6 h-6', colorClass)} />
+        {extension && (
+          <span className="text-[10px] font-medium uppercase text-muted-foreground">
+            {extension.replace('.', '')}
+          </span>
+        )}
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ export function DocumentCard({ document, className }: DocumentCardProps) {
   const [copied, setCopied] = useState(false);
   const fileType = (document.fileType || getFileType(document.fileName)) as FileType;
   const canPreview = isPreviewable(fileType);
+  const extension = document.fileName.split('.').pop()?.toLowerCase() || '';
 
   const handleCopyPath = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -47,14 +48,14 @@ export function DocumentCard({ document, className }: DocumentCardProps) {
   return (
     <div
       className={cn(
-        'group relative p-4 rounded-lg border bg-card card-hover fade-in',
+        'group relative flex flex-col h-[400px] p-4 rounded-lg border bg-card card-hover fade-in',
         'hover:border-primary/50 transition-all duration-200',
         className
       )}
     >
       <Link
         href={`/documents/${document.id}`}
-        className="block"
+        className="flex flex-col flex-1 overflow-hidden"
       >
         {/* Favorite Badge */}
         {document.isFavorite && (
@@ -75,15 +76,18 @@ export function DocumentCard({ document, className }: DocumentCardProps) {
 
         {/* Document Icon */}
         <div className="flex items-center justify-center w-12 h-12 rounded-lg bg-primary/10 mb-3 group-hover:bg-primary/20 transition-colors">
-          <FileIcon fileType={fileType} />
+          <FileIcon fileType={fileType} extension={extension} />
         </div>
 
         {/* Header */}
-        <div className="mb-3">
-          <h3 className="font-medium line-clamp-2 group-hover:text-primary transition-colors min-h-[2.5rem]">
+        <div className="mb-3 flex-1 overflow-hidden">
+          <h3
+            className="font-medium line-clamp-2 group-hover:text-primary transition-colors"
+            title={document.title}
+          >
             {document.title}
           </h3>
-          <p className="text-sm text-muted-foreground mt-1 truncate">
+          <p className="text-sm text-muted-foreground mt-1 truncate" title={document.fileName}>
             {document.fileName}
           </p>
         </div>
@@ -168,7 +172,7 @@ export function DocumentCard({ document, className }: DocumentCardProps) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t">
+        <div className="flex items-center justify-between text-xs text-muted-foreground pt-3 border-t mt-auto">
           <div className="flex items-center gap-3">
             {document.author && (
               <span className="flex items-center gap-1 hover:text-foreground transition-colors">

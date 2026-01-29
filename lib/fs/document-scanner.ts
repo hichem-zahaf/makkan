@@ -13,6 +13,7 @@ import {
   getExtension,
   normalizePath,
 } from '../utils';
+import { ALL_EXTENSIONS } from '@/lib/utils/file-type-utils';
 
 /**
  * Result of scanning a directory for documents
@@ -40,7 +41,7 @@ export interface ScanStats {
  */
 export interface ScanOptions {
   recursive?: boolean;
-  includeOrphans?: boolean; // PDFs without .md files
+  includeOrphans?: boolean; // Files without .md files
   maxDepth?: number;
 }
 
@@ -92,7 +93,7 @@ export async function scanDirectoryForDocuments(
       continue;
     }
 
-    if (!entry.isPdf) {
+    if (!entry.isSupported) {
       continue;
     }
 
@@ -129,12 +130,12 @@ async function scanDirectoryRecursive(
     currentDepth: number;
   }
 ): Promise<
-  Array<{ path: string; isPdf: boolean; hasMetadata: boolean; error?: string }>
+  Array<{ path: string; isSupported: boolean; hasMetadata: boolean; error?: string }>
 > {
   const { recursive, maxDepth, currentDepth } = options;
   const results: Array<{
     path: string;
-    isPdf: boolean;
+    isSupported: boolean;
     hasMetadata: boolean;
     error?: string;
   }> = [];
@@ -151,7 +152,7 @@ async function scanDirectoryRecursive(
     return [
       {
         path: dirPath,
-        isPdf: false,
+        isSupported: false,
         hasMetadata: false,
         error: error instanceof Error ? error.message : 'Failed to read directory',
       },
@@ -177,9 +178,9 @@ async function scanDirectoryRecursive(
       }
     } else if (entry.isFile()) {
       const ext = getExtension(entry.name);
-      const isPdf = ext === '.pdf';
+      const isSupported = ALL_EXTENSIONS.includes(ext.toLowerCase());
 
-      if (isPdf) {
+      if (isSupported) {
         const mdPath = getCompanionMarkdownPath(fullPath);
         let hasMetadata = false;
         try {
@@ -188,7 +189,7 @@ async function scanDirectoryRecursive(
         } catch {
           // No metadata file
         }
-        results.push({ path: fullPath, isPdf, hasMetadata });
+        results.push({ path: fullPath, isSupported, hasMetadata });
       }
     }
   }

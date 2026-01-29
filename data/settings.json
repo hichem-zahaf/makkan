@@ -1,9 +1,9 @@
 {
   "libraries": [
     {
-      "id": "315bac6e",
-      "name": "Downloads",
-      "path": "C:\\Users\\Informatics\\Documents",
+      "id": "58859f8b",
+      "name": "docs",
+      "path": "/documents",
       "organization": "flat"
     }
   ],

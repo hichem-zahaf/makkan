@@ -105,6 +105,7 @@ function createSchemaProgrammatically(database: Database.Database): void {
       file_name TEXT NOT NULL,
       file_path TEXT NOT NULL UNIQUE,
       file_size INTEGER NOT NULL,
+      file_type TEXT,
       title TEXT NOT NULL,
       author_id INTEGER,
       category_id INTEGER,
@@ -146,6 +147,7 @@ function createSchemaProgrammatically(database: Database.Database): void {
       tags,
       notes,
       file_name,
+      file_type,
       content='',
       tokenize='porter unicode61'
     );
@@ -160,16 +162,17 @@ function createSchemaProgrammatically(database: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_documents_date_modified ON documents(date_modified);
     CREATE INDEX IF NOT EXISTS idx_documents_is_favorite ON documents(is_favorite);
     CREATE INDEX IF NOT EXISTS idx_documents_file_name ON documents(file_name COLLATE NOCASE);
+    CREATE INDEX IF NOT EXISTS idx_documents_file_type ON documents(file_type);
 
     -- FTS sync triggers
     CREATE TRIGGER IF NOT EXISTS documents_fts_insert AFTER INSERT ON documents BEGIN
-      INSERT INTO documents_fts(document_id, title, author, tags, notes, file_name)
+      INSERT INTO documents_fts(document_id, title, author, tags, notes, file_name, file_type)
       SELECT new.id, new.title,
         coalesce((SELECT name FROM authors WHERE id = new.author_id), ''),
         (SELECT group_concat(t.name, ' ') FROM tags t
          JOIN document_tags dt ON t.id = dt.tag_id
          WHERE dt.document_id = new.id),
-        new.notes, new.file_name;
+        new.notes, new.file_name, new.file_type;
     END;
 
     CREATE TRIGGER IF NOT EXISTS documents_fts_delete AFTER DELETE ON documents BEGIN
@@ -328,7 +331,7 @@ export function rebuildFtsIndex(): void {
 
   // Rebuild from documents
   database.prepare(`
-    INSERT INTO documents_fts(document_id, title, author, tags, notes, file_name)
+    INSERT INTO documents_fts(document_id, title, author, tags, notes, file_name, file_type)
     SELECT
       d.id,
       d.title,
@@ -337,7 +340,8 @@ export function rebuildFtsIndex(): void {
        JOIN document_tags dt ON t.id = dt.tag_id
        WHERE dt.document_id = d.id),
       d.notes,
-      d.file_name
+      d.file_name,
+      d.file_type
     FROM documents d
     LEFT JOIN authors a ON d.author_id = a.id
   `).run();
@@ -412,4 +416,34 @@ export function exportDatabaseToJson(): {
     tags: database.prepare('SELECT * FROM tags').all(),
     libraries: database.prepare('SELECT * FROM libraries').all(),
   };
+}
+
+/**
+ * Get document count by library path
+ */
+export function getDocumentCountByLibraryPath(libraryPath: string): number {
+  const db = getDatabase();
+  const normalizedPath = libraryPath.replace(/\\/g, '/');
+  const result = db.prepare('SELECT COUNT(*) as count FROM documents WHERE file_path LIKE ?')
+    .get(`${normalizedPath}%`) as { count: number };
+  return result.count;
+}
+
+/**
+ * Delete all documents associated with a library path
+ */
+export function deleteDocumentsByLibraryPath(libraryPath: string): number {
+  const db = getDatabase();
+  const normalizedPath = libraryPath.replace(/\\/g, '/');
+  const result = db.prepare('DELETE FROM documents WHERE file_path LIKE ?')
+    .run(`${normalizedPath}%`);
+  return result.changes;
+}
+
+/**
+ * Get document by ID
+ */
+export function getDocumentById(id: string): any {
+  const db = getDatabase();
+  return db.prepare('SELECT * FROM documents WHERE id = ?').get(id);
 }

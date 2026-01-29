@@ -132,13 +132,15 @@ function applyFilters(documents: Document[], filter: DocumentFilter): Document[]
 
   // Date range filter
   if (filter.dateFrom) {
+    const fromDate = typeof filter.dateFrom === 'string' ? new Date(filter.dateFrom) : filter.dateFrom;
     filtered = filtered.filter(
-      (doc) => (doc.metadata.dateAdded || new Date(0)) >= filter.dateFrom!
+      (doc) => (doc.metadata.dateAdded || new Date(0)) >= fromDate
     );
   }
   if (filter.dateTo) {
+    const toDate = typeof filter.dateTo === 'string' ? new Date(filter.dateTo) : filter.dateTo;
     filtered = filtered.filter(
-      (doc) => (doc.metadata.dateAdded || new Date()) <= filter.dateTo!
+      (doc) => (doc.metadata.dateAdded || new Date()) <= toDate
     );
   }
 

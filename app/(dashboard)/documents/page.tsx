@@ -75,16 +75,22 @@ export default function DocumentsPage() {
         params.set('sortDirection', sort.direction);
 
         // Add filter params from URL
-        const search = searchParams.get('search');
+        const query = searchParams.get('query') || searchParams.get('search');
         const category = searchParams.get('category');
         const readStatus = searchParams.get('readStatus');
         const tags = searchParams.get('tags');
+        const fileTypes = searchParams.get('fileTypes');
+        const dateFrom = searchParams.get('dateFrom');
+        const dateTo = searchParams.get('dateTo');
         const isFavorite = searchParams.get('isFavorite');
 
-        if (search) params.set('search', search);
+        if (query) params.set('query', query);
         if (category) params.set('category', category);
         if (readStatus) params.set('readStatus', readStatus);
         if (tags) params.set('tags', tags);
+        if (fileTypes) params.set('fileTypes', fileTypes);
+        if (dateFrom) params.set('dateFrom', dateFrom);
+        if (dateTo) params.set('dateTo', dateTo);
         if (isFavorite === 'true') params.set('isFavorite', 'true');
 
         const res = await fetch(`/api/documents?${params}`);
@@ -309,7 +315,7 @@ export default function DocumentsPage() {
             });
           }}
           categories={categories}
-          tags={tags}
+          tags={tags.map(tag => ({ name: tag, count: 0 }))}
           authors={authors}
         />
       </div>
