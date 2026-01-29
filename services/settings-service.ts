@@ -82,9 +82,13 @@ export async function updateSettings(
  */
 export async function addLibrary(library: Omit<Library, 'id'>): Promise<Library> {
   const settings = await loadSettings();
+  // Normalize the path to use forward slashes for consistency
+  const { normalizePath } = await import('../lib/utils/path');
+  const normalizedPath = normalizePath(library.path);
   const newLibrary: Library = {
     ...library,
-    id: generateDocumentId(library.path + Date.now()),
+    path: normalizedPath,
+    id: generateDocumentId(normalizedPath + Date.now()),
   };
   settings.libraries.push(newLibrary);
   await saveSettings(settings);
@@ -102,6 +106,11 @@ export async function updateLibrary(
   const index = settings.libraries.findIndex((lib) => lib.id === id);
   if (index === -1) {
     return null;
+  }
+  // Normalize path if provided
+  if (updates.path) {
+    const { normalizePath } = await import('../lib/utils/path');
+    updates.path = normalizePath(updates.path);
   }
   settings.libraries[index] = { ...settings.libraries[index], ...updates };
   await saveSettings(settings);

@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import type { Library } from '@/lib/types';
 import { toast } from 'sonner';
 
@@ -287,25 +294,29 @@ export default function ImportPage() {
                 onChange={(e) =>
                   setLibraryForm({ ...libraryForm, path: e.target.value })
                 }
-                placeholder="/path/to/documents"
+                placeholder="C:\Users\YourName\Downloads"
               />
             </div>
             <div>
               <label className="block text-sm font-medium mb-2">Organization</label>
-              <select
+              <Select
                 value={libraryForm.organization}
-                onChange={(e) =>
+                onValueChange={(value) =>
                   setLibraryForm({
                     ...libraryForm,
-                    organization: e.target.value as Library['organization'],
+                    organization: value as Library['organization'],
                   })
                 }
-                className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
               >
-                <option value="flat">Flat (all files in one folder)</option>
-                <option value="category">By Category</option>
-                <option value="year">By Year</option>
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select organization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="flat">Flat (all files in one folder)</SelectItem>
+                  <SelectItem value="category">By Category</SelectItem>
+                  <SelectItem value="year">By Year</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <DialogFooter>

@@ -54,6 +54,6 @@ CLAUDE.md
 .agents
 
 # data
-makkon.db
-makkon.db-shm
-makkon.db-wal
+*.db
+*.db-shm
+*.db-wal

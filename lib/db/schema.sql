@@ -41,6 +41,7 @@ CREATE TABLE IF NOT EXISTS documents (
   file_name TEXT NOT NULL,
   file_path TEXT NOT NULL UNIQUE,
   file_size INTEGER NOT NULL,
+  file_type TEXT,
   title TEXT NOT NULL,
   author_id INTEGER,
   category_id INTEGER,
@@ -82,6 +83,7 @@ CREATE VIRTUAL TABLE IF NOT EXISTS documents_fts USING fts5(
   tags,
   notes,
   file_name,
+  file_type,
   content='',
   tokenize='porter unicode61'
 );
@@ -96,11 +98,12 @@ CREATE INDEX IF NOT EXISTS idx_documents_date_added ON documents(date_added);
 CREATE INDEX IF NOT EXISTS idx_documents_date_modified ON documents(date_modified);
 CREATE INDEX IF NOT EXISTS idx_documents_is_favorite ON documents(is_favorite);
 CREATE INDEX IF NOT EXISTS idx_documents_file_name ON documents(file_name COLLATE NOCASE);
+CREATE INDEX IF NOT EXISTS idx_documents_file_type ON documents(file_type);
 
 -- Triggers to keep FTS table in sync with documents table
 CREATE TRIGGER IF NOT EXISTS documents_fts_insert AFTER INSERT ON documents BEGIN
   INSERT INTO documents_fts(
-    document_id, title, author, tags, notes, file_name
+    document_id, title, author, tags, notes, file_name, file_type
   )
   SELECT
     new.id,
@@ -110,7 +113,8 @@ CREATE TRIGGER IF NOT EXISTS documents_fts_insert AFTER INSERT ON documents BEGI
      JOIN document_tags dt ON t.id = dt.tag_id
      WHERE dt.document_id = new.id),
     new.notes,
-    new.file_name;
+    new.file_name,
+    new.file_type;
 END;
 
 CREATE TRIGGER IF NOT EXISTS documents_fts_delete AFTER DELETE ON documents BEGIN
@@ -125,7 +129,8 @@ CREATE TRIGGER IF NOT EXISTS documents_fts_update AFTER UPDATE ON documents BEGI
             JOIN document_tags dt ON t.id = dt.tag_id
             WHERE dt.document_id = new.id),
     notes = new.notes,
-    file_name = new.file_name
+    file_name = new.file_name,
+    file_type = new.file_type
   WHERE document_id = new.id;
 END;
 

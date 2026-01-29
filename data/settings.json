@@ -1,12 +1,5 @@
 {
-  "libraries": [
-    {
-      "id": "58859f8b",
-      "name": "docs",
-      "path": "/documents",
-      "organization": "flat"
-    }
-  ],
+  "libraries": [],
   "defaultView": "grid",
   "itemsPerPage": 50,
   "autoScan": true,

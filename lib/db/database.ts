@@ -10,7 +10,7 @@ import { promises as fs } from 'fs';
 
 // Database file location
 const DB_DIR = path.join(process.cwd(), 'data');
-const DB_PATH = path.join(DB_DIR, 'makkon.db');
+const DB_PATH = path.join(DB_DIR, 'makkan.db');
 
 let db: Database.Database | null = null;
 

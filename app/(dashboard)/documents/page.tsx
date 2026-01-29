@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { SearchBar } from '@/components/search/search-bar';
 import { SearchFilters } from '@/components/search/search-filters';
 import { ViewToggle } from '@/components/documents/view-toggle';
 import { DocumentCard } from '@/components/documents/document-card';
@@ -297,18 +296,16 @@ export default function DocumentsPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="flex items-center gap-4">
-        <div className="flex-1">
-          <SearchBar placeholder="Search documents..." />
-        </div>
-        <SearchFilters
+      <SearchFilters
           filters={{
+            query: searchParams.get('query') || searchParams.get('search') || undefined,
             category: searchParams.get('category') || undefined,
             tags: searchParams.get('tags')?.split(',') || undefined,
             readStatus: (searchParams.get('readStatus') as 'unread' | 'reading' | 'read') || undefined,
           }}
           onFiltersChange={(filters) => {
             updateUrlParams({
+              query: filters.query || null,
               category: filters.category || null,
               tags: filters.tags ? filters.tags.join(',') : null,
               readStatus: filters.readStatus || null,
@@ -318,7 +315,6 @@ export default function DocumentsPage() {
           tags={tags.map(tag => ({ name: tag, count: 0 }))}
           authors={authors}
         />
-      </div>
 
       {/* Sort */}
       <div className="flex items-center gap-4">

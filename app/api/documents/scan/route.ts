@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { scanDirectoryForDocuments } from '@/lib/fs/document-scanner';
 import { loadSettings } from '@/services/settings-service';
 import { refreshDocumentCache } from '@/services/document-service';
+import { syncLibrary } from '@/services/sync-service';
 
 /**
  * POST /api/documents/scan
@@ -38,11 +39,19 @@ export async function POST(request: NextRequest) {
     // Refresh the document cache
     await refreshDocumentCache();
 
+    // Sync the library to database (adds new documents, updates existing ones)
+    const syncResult = await syncLibrary(libraryId);
+
     return NextResponse.json({
       success: true,
       stats: result.stats,
       errors: result.errors,
       documentsFound: result.documents.length,
+      synced: {
+        added: syncResult.added,
+        updated: syncResult.updated,
+        errors: syncResult.errors,
+      },
     });
   } catch (error) {
     console.error('Error scanning directory:', error);

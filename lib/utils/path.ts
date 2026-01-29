@@ -47,9 +47,13 @@ export function isPathWithin(childPath: string, parentPath: string): boolean {
 
 /**
  * Normalize a path for consistent comparison
+ * Converts backslashes to forward slashes for cross-platform consistency
  */
 export function normalizePath(filePath: string): string {
-  return path.normalize(filePath);
+  // First normalize the path (resolves . and .., converts to OS-specific separators)
+  const normalized = path.normalize(filePath);
+  // Then convert all backslashes to forward slashes for database consistency
+  return normalized.replace(/\\/g, '/');
 }
 
 /**
