@@ -5,94 +5,12 @@ import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Edit, ExternalLink, Trash2, Star, Copy, Download, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { cn } from '@/lib/utils/cn';
 import type { Document as DocumentType } from '@/lib/types';
 import { formatFileSize } from '@/lib/utils/path';
 import { format as formatDate } from 'date-fns';
 import { toast } from 'sonner';
-
-export function PDFViewer({ document }: { document: DocumentType }) {
-  const [pageCount, setPageCount] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [scale, setScale] = useState(1);
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* PDF Viewer Toolbar */}
-      <div className="flex items-center justify-between p-4 border-b">
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-            disabled={currentPage <= 1}
-          >
-            Previous
-          </Button>
-          <span className="text-sm">
-            Page {currentPage} of {pageCount || '...'}
-          </span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setCurrentPage((p) => Math.min(pageCount, p + 1))}
-            disabled={currentPage >= pageCount}
-          >
-            Next
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setScale((s) => Math.max(0.5, s - 0.25))}
-          >
-            Zoom Out
-          </Button>
-          <span className="text-sm w-16 text-center">{Math.round(scale * 100)}%</span>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setScale((s) => Math.min(2, s + 0.25))}
-          >
-            Zoom In
-          </Button>
-        </div>
-      </div>
-
-      {/* PDF Content */}
-      <div className="flex-1 overflow-auto bg-muted/30 flex items-center justify-center p-4">
-        <div
-          className="bg-white shadow-lg"
-          style={{ transform: `scale(${scale})`, transformOrigin: 'center' }}
-        >
-          {/* Using iframe for PDF - simpler than react-pdf for now */}
-          <iframe
-            src={`/api/files/${document.id}/pdf`}
-            className="border-0"
-            style={{
-              width: '800px',
-              height: '1131px', // A4 ratio at 96 DPI
-            }}
-            onLoad={(e) => {
-              // Try to get page count from PDF
-              const iframe = e.target as HTMLIFrameElement;
-              try {
-                const pdfApp = (iframe.contentWindow as any)?.PDFViewerApplication;
-                const pdf = pdfApp?.pdfDocument;
-                if (pdf) {
-                  pdf.getPageCount().then((count: number) => setPageCount(count));
-                }
-              } catch {
-                // PDF.js not available, use placeholder
-                setPageCount(1);
-              }
-            }}
-          />
-        </div>
-      </div>
-    </div>
-  );
-}
+import { FileViewer } from '@/components/documents/file-viewer';
 
 export function DocumentMetadata({ document }: { document: DocumentType }) {
   const router = useRouter();
@@ -236,29 +154,6 @@ export function DocumentMetadata({ document }: { document: DocumentType }) {
         </div>
       )}
 
-      {/* File Info */}
-      <div className="pt-4 border-t space-y-2">
-        <p className="text-sm text-muted-foreground">File Information</p>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>
-            <span className="text-muted-foreground">Size: </span>
-            {formatFileSize(document.fileSize)}
-          </div>
-          <div>
-            <span className="text-muted-foreground">Added: </span>
-            {document.createdAt
-              ? formatDate(new Date(document.createdAt), 'MMM d, yyyy')
-              : 'Unknown'}
-          </div>
-          <div>
-            <span className="text-muted-foreground">Modified: </span>
-            {document.updatedAt
-              ? formatDate(new Date(document.updatedAt), 'MMM d, yyyy')
-              : 'Unknown'}
-          </div>
-        </div>
-      </div>
-
       {/* File Info - Expandable */}
       <div className="pt-4 border-t">
         <button
@@ -331,7 +226,7 @@ export function DocumentMetadata({ document }: { document: DocumentType }) {
         <Button variant="outline" asChild>
           <a href={`/api/files/${document.id}/pdf`} target="_blank" rel="noopener">
             <ExternalLink className="w-4 h-4 mr-2" />
-            Open PDF
+            Open File
           </a>
         </Button>
       </div>
@@ -341,6 +236,7 @@ export function DocumentMetadata({ document }: { document: DocumentType }) {
 
 export default function DocumentDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const [document, setDocument] = useState<DocumentType | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -354,6 +250,19 @@ export default function DocumentDetailPage() {
         }
         const data = await res.json();
         setDocument(data);
+
+        // Mark as read when document is opened
+        if (data.metadata.readStatus !== 'read') {
+          try {
+            await fetch(`/api/documents/${params.id}`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ readStatus: 'read' }),
+            });
+          } catch (err) {
+            console.warn('Failed to mark document as read:', err);
+          }
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load document');
       } finally {
@@ -384,9 +293,9 @@ export default function DocumentDetailPage() {
 
       {/* Main Content */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-3 gap-6 min-h-0">
-        {/* PDF Viewer */}
+        {/* File Viewer */}
         <div className="lg:col-span-2 border rounded-lg overflow-hidden">
-          <PDFViewer document={document} />
+          <FileViewer document={document} />
         </div>
 
         {/* Metadata Sidebar */}
@@ -399,8 +308,6 @@ export default function DocumentDetailPage() {
 }
 
 // Helper components
-import { cn } from '@/lib/utils/cn';
-
 function DocumentLoading() {
   return (
     <div className="flex items-center justify-center h-64">

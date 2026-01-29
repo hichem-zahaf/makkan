@@ -87,7 +87,7 @@ export default function HomePage() {
   ];
 
   const quickActions = [
-    { href: '/documents', label: 'Browse Documents', icon: FolderOpen, color: 'bg-primary' },
+    { href: '/documents', label: 'Browse Documents', icon: FolderOpen, color: 'bg-secondary' },
     { href: '/import', label: 'Import Files', icon: Upload, color: 'bg-secondary' },
     { href: '/search', label: 'Search', icon: Search, color: 'bg-accent' },
     { href: '/settings', label: 'Settings', icon: Settings, color: 'bg-muted' },

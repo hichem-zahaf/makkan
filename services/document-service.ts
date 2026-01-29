@@ -87,16 +87,21 @@ export async function getFilteredDocuments(
 function applyFilters(documents: Document[], filter: DocumentFilter): Document[] {
   let filtered = [...documents];
 
-  // Search filter
-  if (filter.search) {
-    const searchLower = filter.search.toLowerCase();
+  // Search filter (also checks query parameter)
+  const searchQuery = filter.query || filter.search;
+  if (searchQuery) {
+    const searchLower = searchQuery.toLowerCase();
     filtered = filtered.filter((doc) => {
       return (
         doc.metadata.title.toLowerCase().includes(searchLower) ||
         doc.metadata.author?.toLowerCase().includes(searchLower) ||
         doc.metadata.tags.some((tag) => tag.toLowerCase().includes(searchLower)) ||
         doc.metadata.notes?.toLowerCase().includes(searchLower) ||
-        doc.fileName.toLowerCase().includes(searchLower)
+        doc.metadata.category?.toLowerCase().includes(searchLower) ||
+        doc.metadata.project?.toLowerCase().includes(searchLower) ||
+        doc.metadata.language?.toLowerCase().includes(searchLower) ||
+        doc.fileName.toLowerCase().includes(searchLower) ||
+        doc.filePath.toLowerCase().includes(searchLower)
       );
     });
   }
@@ -142,6 +147,18 @@ function applyFilters(documents: Document[], filter: DocumentFilter): Document[]
     filtered = filtered.filter(
       (doc) => (doc.metadata.dateAdded || new Date()) <= toDate
     );
+  }
+
+  // File type filter
+  if (filter.fileTypes && filter.fileTypes.length > 0) {
+    filtered = filtered.filter((doc) =>
+      filter.fileTypes!.includes(doc.metadata.fileType || 'unknown')
+    );
+  }
+
+  // Favorite filter
+  if (filter.isFavorite) {
+    filtered = filtered.filter((doc) => doc.isFavorite === true);
   }
 
   return filtered;

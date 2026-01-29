@@ -1,5 +1,12 @@
 {
-  "libraries": [],
+  "libraries": [
+    {
+      "id": "35a275a7",
+      "name": "Documets",
+      "path": "C:/Users/Informatics/Documents",
+      "organization": "flat"
+    }
+  ],
   "defaultView": "grid",
   "itemsPerPage": 50,
   "autoScan": true,

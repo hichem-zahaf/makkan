@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { cn } from '@/lib/utils/cn';
 
 interface SelectContextValue {
@@ -9,6 +10,7 @@ interface SelectContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
   triggerRef: React.RefObject<HTMLButtonElement | null>;
+  contentRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const SelectContext = React.createContext<SelectContextValue | null>(null);
@@ -37,6 +39,7 @@ export function Select({
   const [uncontrolledValue, setUncontrolledValue] = React.useState(defaultValue);
   const [open, setOpen] = React.useState(false);
   const triggerRef = React.useRef<HTMLButtonElement>(null);
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   const isControlled = controlledValue !== undefined;
   const value = isControlled ? controlledValue : uncontrolledValue;
@@ -54,7 +57,15 @@ export function Select({
     if (!open) return;
 
     const handleClickOutside = (e: MouseEvent) => {
-      if (triggerRef.current && !triggerRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+
+      // Check if click is outside trigger
+      const isOutsideTrigger = triggerRef.current && !triggerRef.current.contains(target);
+
+      // Check if click is outside content (Portal content)
+      const isOutsideContent = contentRef.current && !contentRef.current.contains(target);
+
+      if (isOutsideTrigger && isOutsideContent) {
         setOpen(false);
       }
     };
@@ -79,7 +90,7 @@ export function Select({
 
   return (
     <SelectContext.Provider
-      value={{ value, onValueChange: handleValueChange, open, setOpen, triggerRef }}
+      value={{ value, onValueChange: handleValueChange, open, setOpen, triggerRef, contentRef }}
     >
       {children}
     </SelectContext.Provider>
@@ -146,8 +157,13 @@ export const SelectContent = React.forwardRef<
   HTMLDivElement,
   React.HTMLAttributes<HTMLDivElement>
 >(({ className, children, ...props }, ref) => {
-  const { open, triggerRef } = useSelectContext();
+  const { open, triggerRef, contentRef } = useSelectContext();
   const [position, setPosition] = React.useState({ top: 0, left: 0, width: 0 });
+  const [isMounted, setIsMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   React.useEffect(() => {
     if (open && triggerRef.current) {
@@ -160,11 +176,18 @@ export const SelectContent = React.forwardRef<
     }
   }, [open, triggerRef]);
 
-  if (!open) return null;
+  if (!open || !isMounted) return null;
 
-  return (
+  const content = (
     <div
-      ref={ref}
+      ref={(node) => {
+        contentRef.current = node;
+        if (typeof ref === 'function') {
+          ref(node);
+        } else if (ref) {
+          ref.current = node;
+        }
+      }}
       className={cn(
         'fixed z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover text-popover-foreground shadow-md',
         className
@@ -179,6 +202,8 @@ export const SelectContent = React.forwardRef<
       {children}
     </div>
   );
+
+  return createPortal(content, document.body);
 });
 SelectContent.displayName = 'SelectContent';
 

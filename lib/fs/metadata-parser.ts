@@ -60,6 +60,9 @@ export function serializeMarkdown(
   if (metadata.rating) frontmatter.rating = metadata.rating;
   if (metadata.source) frontmatter.source = metadata.source;
   if (metadata.notes) frontmatter.notes = metadata.notes;
+  if (metadata.project) frontmatter.project = metadata.project;
+  if (metadata.language) frontmatter.language = metadata.language;
+  if (metadata.fileType) frontmatter.file_type = metadata.fileType;
 
   // Add custom fields
   if (metadata.customFields) {
@@ -90,6 +93,9 @@ export function frontmatterToMetadata(
   if (frontmatter.rating) metadata.rating = frontmatter.rating;
   if (frontmatter.source) metadata.source = frontmatter.source;
   if (frontmatter.notes) metadata.notes = frontmatter.notes;
+  if (frontmatter.project) metadata.project = frontmatter.project;
+  if (frontmatter.language) metadata.language = frontmatter.language;
+  if (frontmatter.file_type) metadata.fileType = frontmatter.file_type;
 
   if (frontmatter.date_added) {
     metadata.dateAdded = new Date(frontmatter.date_added);

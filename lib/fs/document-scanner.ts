@@ -14,6 +14,7 @@ import {
   normalizePath,
 } from '../utils';
 import { ALL_EXTENSIONS } from '@/lib/utils/file-type-utils';
+import { getFileType } from '@/components/documents/file-icon';
 
 /**
  * Result of scanning a directory for documents
@@ -208,6 +209,9 @@ async function processDocument(pdfPath: string): Promise<Document> {
   const fileStats = await fs.stat(pdfPath);
   const now = new Date();
 
+  // Compute file type from filename
+  const fileType = getFileType(fileName);
+
   let metadata;
   try {
     const markdownContent = await readMarkdownFile(mdPath);
@@ -221,6 +225,10 @@ async function processDocument(pdfPath: string): Promise<Document> {
     // If markdown file doesn't exist or is invalid, create default metadata
     metadata = createDefaultMetadata(fileName);
   }
+
+  // Always set fileType from actual file, not from metadata
+  // This ensures the type stays in sync with the actual file
+  metadata.fileType = fileType;
 
   return {
     id: generateDocumentId(pdfPath),

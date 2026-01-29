@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Filter, SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useDebounce } from '@/hooks/use-debounce';
 
 interface SearchFiltersProps {
   filters: DocumentFilter;
@@ -39,6 +40,10 @@ export function SearchFilters({
   className,
 }: SearchFiltersProps) {
   const [showAdvanced, setShowAdvanced] = useState(false);
+  // Local state for immediate search input updates
+  const [searchInput, setSearchInput] = useState(filters.query || '');
+  // Debounced search value (400ms delay)
+  const debouncedSearch = useDebounce(searchInput, 400);
 
   const activeFilterCount = [
     filters.category,
@@ -56,7 +61,22 @@ export function SearchFilters({
 
   const clearAllFilters = () => {
     onFiltersChange({});
+    setSearchInput('');
   };
+
+  // Update filters when debounced search changes
+  useEffect(() => {
+    if (debouncedSearch !== filters.query) {
+      onFiltersChange({ ...filters, query: debouncedSearch || undefined });
+    }
+  }, [debouncedSearch]);
+
+  // Update local input when filters.query changes from external source
+  useEffect(() => {
+    if (filters.query !== searchInput && filters.query !== debouncedSearch) {
+      setSearchInput(filters.query || '');
+    }
+  }, [filters.query]);
 
   const handleTagToggle = (tag: string) => {
     const currentTags = filters.tags || [];
@@ -79,8 +99,7 @@ export function SearchFilters({
   };
 
   const handleDateRangeChange = (from?: string, to?: string) => {
-    updateFilter('dateFrom', from);
-    updateFilter('dateTo', to);
+    onFiltersChange({ ...filters, dateFrom: from, dateTo: to });
   };
 
   return (
@@ -93,11 +112,11 @@ export function SearchFilters({
             <Input
               type="search"
               placeholder="Search documents..."
-              value={filters.query || ''}
-              onChange={(e) => updateFilter('query', e.target.value || undefined)}
+              value={searchInput || ''}
+              onChange={(e) => setSearchInput(e.target.value)}
               className="w-full"
             />
-            {(filters.query || activeFilterCount > 0) && (
+            {(searchInput || activeFilterCount > 0) && (
               <Button
                 variant="ghost"
                 size="icon"
